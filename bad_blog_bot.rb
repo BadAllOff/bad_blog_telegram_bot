@@ -29,7 +29,7 @@ class BadBlogTelegramBot
     if BOT_ENV == 'development'
       @db       = PG::Connection.open(dbname: 'bad_bot_db')
     else
-      @db       = PG::Connection.new(ENV['DATABASE_URL'])
+      @db       = PG::Connection.new(ENV['HEROKU_POSTGRESQL_CYAN_URL'])
     end
     @rss      = RSS::Parser.parse(url, false)
 
@@ -52,6 +52,7 @@ class BadBlogTelegramBot
 
   def send
     posts = @db.exec("SELECT url title FROM posts WHERE sended = false")
+    p posts.any?
     if posts.any?
       posts.each do |post|
         text = "Новая запись в блоге: \n #{post['title']} \n #{post['url']}"
