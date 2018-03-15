@@ -17,11 +17,16 @@ class BadBlogTelegramBot
       @token = ENV['TELEGRAM_BAD_BLOG_BOT_API_KEY']
     end
 
+    if ENV['TELEGRAM_BAD_BLOG_OWNER_ID'].nil?
+      @logger.fatal "Environment variable TELEGRAM_BAD_BLOG_OWNER_ID not set!"
+      exit 0
+    else
+      @owner = ENV['TELEGRAM_BAD_BLOG_OWNER_ID']
+    end
+
     @url      = url
     @channel  = channel
-    # uri       = URI.parse(ENV['BAD_BOT_DATABASE_URL'])
-
-    @db       = PG::Connection.open(dbname: 'bad_bot_db') #PG.connect(uri.hostname, uri.port, nil, nil, uri.path[1..-1], uri.user, uri.password)
+    @db       = PG::Connection.open(dbname: 'bad_bot_db')
     @rss      = RSS::Parser.parse(url, false)
 
     @db.exec("CREATE TABLE IF NOT EXISTS posts (id serial, url varchar(450) NOT NULL, sended bool DEFAULT false)")
@@ -34,7 +39,7 @@ class BadBlogTelegramBot
       if @db.exec("SELECT exists (SELECT 1 FROM posts WHERE url = '#{url}' LIMIT 1)::int").values[0][0].to_i == 1
         @logger.info "Post exist in DB will not rewrite"
       else
-        if @db.exec("INSERT INTO posts (url) VALUES ('#{url}')")
+        if @db.exec("INSERT INTO posts (url, title) VALUES ('#{url}', '#{item.title}')")
           @logger.info "Write post to DB #{url}"
         end
       end
@@ -42,13 +47,21 @@ class BadBlogTelegramBot
   end
 
   def send
-    urls = @db.exec("SELECT url FROM posts WHERE sended = false")
-    urls.each do |url|
-      text = "Новая запись в блоге - #{url['url']}"
-      if telegram_send(text)
-        @db.exec("UPDATE posts SET sended = true WHERE url = '#{url['url']}'")
+    posts = @db.exec("SELECT url title FROM posts WHERE sended = false")
+    if posts.any?
+      posts.each do |post|
+        text = "Новая запись в блоге: \n #{post['title']} \n #{post['url']}"
+        if telegram_send(text)
+          @db.exec("UPDATE posts SET sended = true WHERE url = '#{post['url']}'")
+        end
       end
+    else
+      @channel = @owner
+      message = "Cегодня: #{(Time.now).strftime('%d/%m/%Y')} \n В блоге ничего нового не опубликовано."
+
+      telegram_send(message)
     end
+
   end
 
   private
