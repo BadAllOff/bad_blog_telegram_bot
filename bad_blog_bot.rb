@@ -29,7 +29,7 @@ class BadBlogTelegramBot
     if BOT_ENV == 'development'
       @db       = PG::Connection.open(dbname: 'bad_bot_db')
     else
-      @db       = PG::Connection.new(ENV['HEROKU_POSTGRESQL_CYAN_URL'])
+      @db       = PG::Connection.new(ENV['DATABASE_URL'])
     end
     @rss      = RSS::Parser.parse(url, false)
 
