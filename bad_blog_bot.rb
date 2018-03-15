@@ -51,18 +51,17 @@ class BadBlogTelegramBot
   end
 
   def send
-    posts = @db.exec("SELECT url title FROM posts WHERE sended = false")
+    posts = @db.exec("SELECT url, title FROM posts WHERE sended = false")
     if posts.any?
       posts.each do |post|
-        text = "Новая запись в блоге: \n #{post['title']} \n #{post['url']}"
-        if telegram_send(text)
+        message = "Новая запись в блоге: \n #{post['title']} \n #{post['url']}"
+        if telegram_send(message)
           @db.exec("UPDATE posts SET sended = true WHERE url = '#{post['url']}'")
         end
       end
     else
       @channel = @owner
       message = "Cегодня: #{(Time.now).strftime('%d/%m/%Y')} \n В блоге ничего нового не опубликовано."
-
       telegram_send(message)
     end
 
