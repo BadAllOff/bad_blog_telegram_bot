@@ -26,7 +26,11 @@ class BadBlogTelegramBot
 
     @url      = url
     @channel  = channel
-    @db       = PG::Connection.open(dbname: 'bad_bot_db')
+    if BOT_ENV == 'development'
+      @db       = PG::Connection.open(dbname: 'bad_bot_db')
+    else
+      @db       = PG::Connection.new(ENV['DATABASE_URL'])
+    end
     @rss      = RSS::Parser.parse(url, false)
 
     @db.exec("CREATE TABLE IF NOT EXISTS posts (id serial, url varchar(450) NOT NULL, sended bool DEFAULT false)")
